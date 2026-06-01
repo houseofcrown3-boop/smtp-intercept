@@ -1,0 +1,16 @@
+{
+  "name": "auction-smtp-intercept",
+  "version": "1.0.0",
+  "description": "Webkul auction email interceptor + workflow engine",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "smtp-server": "^3.13.4",
+    "mailparser": "^3.7.1"
+  }
+}
