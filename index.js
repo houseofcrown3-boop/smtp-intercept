@@ -6,6 +6,8 @@ const { simpleParser } = require("mailparser");
 
 const server = new SMTPServer({
     authOptional: true,
+      hideSTARTTLS: true,
+      disabledCommands: ["STARTTLS"],
     size: 10 * 1024 * 1024,
     onAuth(auth, session, callback) {
           console.log(`[AUTH] user=${auth.username} method=${auth.method}`);
