@@ -74,7 +74,7 @@ const httpServer = http.createServer((req, res) => {
         <div class="meta">
           <div><span class="label">From:</span> ${escapeHtml(e.from)}</div>
           <div><span class="label">To:</span> ${escapeHtml(e.to)}</div>
-          <div><span class="label">Time:</span> ${escapeHtml(new Date(e.timestamp).toLocaleString("ko-KR"))}</div>
+          <div><span class="label">Time:</span> ${escapeHtml(new Date(e.timestamp).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }))}</div>
         </div>
         <details>
           <summary>본문 보기</summary>
