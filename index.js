@@ -6,6 +6,18 @@ const http = require("http");
 const capturedEmails = [];
 const MAX_EMAILS = 100;
 
+// ===== SSE: 입찰 이벤트를 브라우저에 실시간 푸시 =====
+const sseClients = new Set();
+function broadcastBid(info) {
+  const msg = `event: bid\ndata: ${JSON.stringify(info || {})}\n\n`;
+  for (const res of sseClients) { try { res.write(msg); } catch (e) {} }
+}
+// 입찰/프록시 관련 메일인지 (전체기록·현재가 갱신이 필요한 이벤트)
+function isBidEvent(email) {
+  const s = (email.subject || "") + " " + (email.text || "") + " " + (email.html || "");
+  return /bid placed|placed a bid|proxy amount|higher than you/i.test(s);
+}
+
 function escapeHtml(s) {
   return String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -43,6 +55,7 @@ const smtpServer = new SMTPServer({
       console.log(`[INTERCEPTED] ${email.subject} from ${email.from}`);
       capturedEmails.unshift(email);
       if (capturedEmails.length > MAX_EMAILS) capturedEmails.pop();
+      if (isBidEvent(email)) { broadcastBid({ t: Date.now(), subject: email.subject }); }   // 입찰 메일 → 즉시 푸시
       callback();
     });
   },
@@ -59,6 +72,22 @@ const httpServer = http.createServer((req, res) => {
   if (req.url === "/api/emails") {
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
     return res.end(JSON.stringify(capturedEmails));
+  }
+  // SSE 실시간 채널: 브라우저가 여기 연결 → 입찰 메일 오면 "bid" 이벤트 푸시
+  if (req.url === "/events") {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "Connection": "keep-alive",
+      "Access-Control-Allow-Origin": "*",
+      "X-Accel-Buffering": "no",
+    });
+    res.write("retry: 3000\n");
+    res.write("event: hello\ndata: {}\n\n");
+    sseClients.add(res);
+    const hb = setInterval(() => { try { res.write(": ping\n\n"); } catch (e) {} }, 25000);
+    req.on("close", () => { clearInterval(hb); sseClients.delete(res); });
+    return;
   }
   if (req.url === "/clear") {
     capturedEmails.length = 0;
